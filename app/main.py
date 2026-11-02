@@ -1,6 +1,8 @@
 import logging
 from fastapi import FastAPI, HTTPException
 from app.db.supabase import supabase
+from fastapi import Depends
+from app.core.security import get_current_user
 
 logger = logging.getLogger(__name__)
 
@@ -35,3 +37,19 @@ def db_test():
             status_code=503,
             detail="Supabase 연결 실패"
         )
+
+@app.get("/api/v1/users/me")    
+def get_my_profile(user=Depends(get_current_user)):
+    response = (
+        supabase.table("profiles")
+        .select("id, nickname, created_at")
+        .eq("id", str(user.id))
+        .single()
+        .execute()
+    )
+
+    return {
+        "id": str(user.id),
+        "email": user.email,
+        "profile": response.data
+    }
