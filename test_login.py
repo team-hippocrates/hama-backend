@@ -12,7 +12,7 @@ client = create_client(
 
 response = client.auth.sign_in_with_password({
     "email": "choihanni27@gmail.com",
-    "password": "TestPassword123!"
+    "password": "secret"
 })
 
 print("로그인 성공!")

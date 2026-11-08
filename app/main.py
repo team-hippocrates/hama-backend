@@ -3,10 +3,12 @@ from fastapi import FastAPI, HTTPException
 from app.db.supabase import supabase
 from fastapi import Depends
 from app.core.security import get_current_user
+from app.routers.quizzes import router as quizzes_router
 
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="똑똑하마 API")
+app.include_router(quizzes_router)
 
 
 @app.get("/")
