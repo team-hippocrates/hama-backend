@@ -4,11 +4,13 @@ from app.db.supabase import supabase
 from fastapi import Depends
 from app.core.security import get_current_user
 from app.routers.quizzes import router as quizzes_router
+from app.routers.attendance import router as attendance_router
 
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="똑똑하마 API")
 app.include_router(quizzes_router)
+app.include_router(attendance_router)
 
 
 @app.get("/")

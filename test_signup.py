@@ -2,6 +2,7 @@
 from supabase import create_client
 from app.core.config import SUPABASE_URL
 import os
+import SIGNUP_TEST_KEY
 
 # 테스트에서는 공개용 키를 사용
 SUPABASE_PUBLISHABLE_KEY = os.getenv("SUPABASE_PUBLISHABLE_KEY")
@@ -16,7 +17,7 @@ client = create_client(
 
 response = client.auth.sign_up({
     "email": "choihanni27@gmail.com",
-    "password": "TestPassword123!",
+    "password": SIGNUP_TEST_KEY,
     "options": {
         "data": {
             "nickname": "테스트하마"
