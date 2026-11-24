@@ -7,8 +7,9 @@ from app.core.security import get_current_user
 from app.db.supabase import supabase
 from pydantic import BaseModel
 from datetime import datetime, timezone
-from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
+from app.services.review_service import create_review_schedules
+import traceback
 
 logger = logging.getLogger(__name__)
 
@@ -154,6 +155,8 @@ class QuizSubmitRequest(BaseModel):
     answer: str
 
 
+
+
 @router.post("/{quiz_id}/submit")
 def submit_quiz(
     quiz_id: int,
@@ -233,22 +236,26 @@ def submit_quiz(
         correct_answer = quiz["correct_answer"].strip().upper()
         is_correct = answer == correct_answer
 
+        
         # 5. 오답이면 진행 상태 유지
         if not is_correct:
             return {
                 "quiz_id": quiz_id,
                 "is_correct": False,
                 "status": "in_progress",
-                "explanation": quiz["explanation"],
+                "explanation": quiz["retry_hint"],
                 "message": "해설을 확인하고 다시 풀어보세요."
             }
 
-        # 6. 정답이면 완료 상태로 변경
+        # 6. 최초 정답 시간 저장
+        first_correct_at = datetime.now(timezone.utc)
+
+        # 7. 정답이면 완료 상태로 변경
         update_response = (
             supabase.table("user_quiz_progress")
             .update({
                 "status": "completed",
-               "first_correct_at": datetime.now(timezone.utc).isoformat()
+                "first_correct_at": first_correct_at.isoformat()
             })
             .eq("user_id", user_id)
             .eq("quiz_id", quiz_id)
@@ -261,10 +268,18 @@ def submit_quiz(
                 status_code=409,
                 detail="퀴즈 진행 상태가 변경되었습니다."
             )
-            # 7. 정답을 맞혔으므로 당일 출석 기록
+
+        # 8. 당일 출석 기록
         record_attendance(user_id)
 
-        # 7. 정답 결과 반환
+        # 9. 복습 일정 생성
+        create_review_schedules(
+            user_id=user_id,
+            quiz_id=quiz_id,
+            first_correct_at=first_correct_at
+        )
+
+        # 10. 정답 결과 반환
         return {
             "quiz_id": quiz_id,
             "is_correct": True,
@@ -273,6 +288,7 @@ def submit_quiz(
             "explanation": quiz["explanation"],
             "message": "정답입니다!"
         }
+
 
     except HTTPException:
         raise
