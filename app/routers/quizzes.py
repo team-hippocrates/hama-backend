@@ -7,6 +7,8 @@ from app.core.security import get_current_user
 from app.db.supabase import supabase
 from pydantic import BaseModel
 from datetime import datetime, timezone
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +16,21 @@ router = APIRouter(
     prefix="/api/v1/quizzes",
     tags=["Quizzes"]
 )
+def record_attendance(user_id: str):
+    # 한국 시간 기준 오늘 날짜
+    today = datetime.now(
+        ZoneInfo("Asia/Seoul")
+    ).date().isoformat()
 
+    # 출석 기록 저장
+    supabase.table("attendance").upsert(
+        {
+            "user_id": user_id,
+            "attendance_date": today
+        },
+        on_conflict="user_id,attendance_date",
+        ignore_duplicates=True
+    ).execute()
 
 @router.get("/next")
 def get_next_quiz(
@@ -245,6 +261,8 @@ def submit_quiz(
                 status_code=409,
                 detail="퀴즈 진행 상태가 변경되었습니다."
             )
+            # 7. 정답을 맞혔으므로 당일 출석 기록
+        record_attendance(user_id)
 
         # 7. 정답 결과 반환
         return {
@@ -265,6 +283,8 @@ def submit_quiz(
             status_code=500,
             detail="퀴즈 정답 제출 중 오류가 발생했습니다."
         )
+
+
 
 # 퀴즈 유형 조회
 @router.get("/types")
